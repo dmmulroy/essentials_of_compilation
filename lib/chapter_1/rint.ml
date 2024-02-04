@@ -65,7 +65,7 @@ let%test_module "rint" =
       Prim (Add, [ Int rv; Prim (Negate, [ Int 8 ]) ])
     ;;
 
-    let%test_module "is_left" =
+    let%test_module "is_leaf" =
       (module struct
         let%test "Read [] is a leaf" = is_leaf (Prim (Read, [])) = true
         let%test "Int 8 is a leaf" = is_leaf (Int 8) = true
@@ -92,7 +92,7 @@ let%test_module "rint" =
 
     let%test_module "interp_exp" =
       (module struct
-        let%test "(+ 60 9) is 60" =
+        let%test "(+ 60 9) is 69" =
           interp_exp (Prim (Add, [ Int 60; Int 9 ])) = 69
         ;;
 
@@ -138,7 +138,7 @@ let%test_module "rint" =
         ;;
 
         let%test "interp (program () (+ 1 (+ 3 1))) = interp (partial_eval \
-                  (program () (+ 1 (+ 3 1)))) case 2" =
+                  (program () (+ 1 (+ 3 1)))" =
           let program =
             Program ((), Prim (Add, [ Int 1; Prim (Add, [ Int 3; Int 1 ]) ]))
           in
@@ -146,7 +146,7 @@ let%test_module "rint" =
         ;;
 
         let%test "interp (program () (- (+ 3 (- 5)))) = interp (partial_eval \
-                  (program () (- (+ 3 (- 5))))) case 2" =
+                  (program () (- (+ 3 (- 5)))))" =
           let program =
             Program ((), Prim (Negate, [ Prim (Add, [ Int 3; Int 5 ]) ]))
           in
