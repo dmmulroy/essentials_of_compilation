@@ -22,6 +22,8 @@
  (depends
   ocaml
   dune
+  base
+  fmt
   ppx_deriving
   ppx_inline_test)
  (tags
