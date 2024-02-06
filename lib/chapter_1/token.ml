@@ -32,7 +32,7 @@ let to_string = function
   | Program -> "program"
 ;;
 
-let keyword_of_string = function
+let identifier_of_string = function
   | "read" -> Read
   | "program" -> Program
   (* TODO: Revisit whether this should Identifier(string) or Illegal(string)*)
