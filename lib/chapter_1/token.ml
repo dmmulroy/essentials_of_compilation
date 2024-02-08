@@ -18,10 +18,25 @@ type t =
 [@@deriving eq]
 
 let to_string = function
-  | Illegal str -> Printf.sprintf "Illegal(%s)" str
+  | Illegal str -> Fmt.str "Illegal(%s)" str
   | Eof -> "Eof"
-  | Identifier str -> Printf.sprintf "Identifier(%s)" str
-  | Int int -> Printf.sprintf "Int(%s)" int
+  | Identifier str -> Fmt.str "Identifier(%s)" str
+  | Int int -> Fmt.str "Int(%s)" int
+  | Add -> "Add"
+  | Negate -> "Negate"
+  | LBracket -> "LBracket"
+  | RBracket -> "RBracket"
+  | LParen -> "LParen"
+  | RParen -> "RParen"
+  | Read -> "Read"
+  | Program -> "Program"
+;;
+
+let to_string_literal = function
+  | Eof -> "Eof"
+  | Illegal str -> Fmt.str "%s" str
+  | Identifier str -> Fmt.str "%s" str
+  | Int int -> Fmt.str "%s" int
   | Add -> "+"
   | Negate -> "-"
   | LBracket -> "["
@@ -32,9 +47,13 @@ let to_string = function
   | Program -> "program"
 ;;
 
+let pp fmt token =
+  Fmt.pf fmt "Token: %s, Literal: %s" (to_string token)
+    (to_string_literal token)
+;;
+
 let identifier_of_string = function
   | "read" -> Read
   | "program" -> Program
-  (* TODO: Revisit whether this should Identifier(string) or Illegal(string)*)
   | str -> Identifier str
 ;;

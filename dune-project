@@ -19,13 +19,7 @@
  (name essentials_of_compilation)
  (synopsis "A short synopsis")
  (description "A longer description")
- (depends
-  ocaml
-  dune
-  base
-  fmt
-  ppx_deriving
-  ppx_inline_test)
+ (depends ocaml dune base stdio fmt ppx_deriving ppx_inline_test)
  (tags
   (topics "to describe" your project)))
 

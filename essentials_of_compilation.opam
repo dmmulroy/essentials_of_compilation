@@ -13,6 +13,7 @@ depends: [
   "ocaml"
   "dune" {>= "3.12"}
   "base"
+  "stdio"
   "fmt"
   "ppx_deriving"
   "ppx_inline_test"

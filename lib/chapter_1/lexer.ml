@@ -11,6 +11,7 @@ let make input =
 let is_letter = Char.is_alpha
 let is_digit = Char.is_digit
 let is_whitespace = Char.is_whitespace
+let current_char { ch; _ } = ch
 
 let advance lexer =
   let position = lexer.position + 1 in
@@ -20,13 +21,16 @@ let advance lexer =
       { lexer with position; ch = Some (String.get lexer.input position) }
 ;;
 
-let rec advance_while (lexer : t) ~f:(predicate : char -> bool) : t =
+let rec advance_while lexer ~f:predicate =
   match lexer.ch with
   | Some ch when predicate ch -> lexer |> advance |> advance_while ~f:predicate
   | _ -> lexer
 ;;
 
-let take_while (lexer : t) ~f:(predicate : char -> bool) : t * Buffer.t =
+let skip_whitespace = advance_while ~f:is_whitespace
+let peek lexer : char option = lexer |> advance |> current_char
+
+let take_while lexer ~f:predicate =
   let rec loop char_buffer lexer =
     match lexer.ch with
     | Some ch when predicate ch ->
@@ -37,17 +41,22 @@ let take_while (lexer : t) ~f:(predicate : char -> bool) : t * Buffer.t =
   loop (Buffer.create (String.length lexer.input - lexer.position)) lexer
 ;;
 
-let skip_whitespace = advance_while ~f:is_whitespace
-
 let read_identifier lexer =
   let advanced_lexer, char_buffer = take_while lexer ~f:is_letter in
   (advanced_lexer, Token.identifier_of_string (Buffer.contents char_buffer))
 ;;
 
+let read_digits lexer =
+  let open Token in
+  let advanced_lexer, char_buffer = take_while lexer ~f:is_digit in
+  (advanced_lexer, Int (Buffer.contents char_buffer))
+;;
+
 let next_token lexer =
   let open Token in
+  let lexer = skip_whitespace lexer in
   match lexer.ch with
-  | None -> (lexer, None)
+  | None -> (lexer, Eof)
   | Some ch ->
       let advanced_lexer, token =
         match ch with
@@ -58,9 +67,10 @@ let next_token lexer =
         | '(' -> (advance lexer, LParen)
         | ')' -> (advance lexer, RParen)
         | ch when is_letter ch -> read_identifier lexer
-        | _ -> (advance lexer, Eof)
+        | ch when is_digit ch -> read_digits lexer
+        | ch -> (advance lexer, Illegal (Char.to_string ch))
       in
-      (advanced_lexer, Some token)
+      (advanced_lexer, token)
 ;;
 
 let%test_module "lexer" =
@@ -68,14 +78,13 @@ let%test_module "lexer" =
     open Token
 
     let lex input =
-      String.fold input
-        ~init:(make input, [])
-        ~f:(fun (lexer, tokens) _char ->
-          let advanced_lexer, token_opt = next_token lexer in
-          match token_opt with
-          | Some token -> (advanced_lexer, token :: tokens)
-          | None -> (advanced_lexer, tokens))
-      |> snd |> List.rev
+      let rec loop lexer tokens =
+        let advanced_lexer, token = next_token lexer in
+        match token with
+        | Eof -> List.rev tokens
+        | token -> loop advanced_lexer (token :: tokens)
+      in
+      loop (make input) []
     ;;
 
     let%test_module "advance" =
@@ -106,15 +115,33 @@ let%test_module "lexer" =
       end)
     ;;
 
+    let%test_module "read_digits" =
+      (module struct
+        let%test "it reads digits successfully" =
+          let input = "69" in
+          let lexer = make input in
+          let expected = Int "69" in
+          let actual = lexer |> read_digits |> snd in
+          Token.equal expected actual
+        ;;
+
+        let%test "it does read/lex decimals/floats" =
+          let input = "6.9" in
+          let lexer = make input in
+          let expected = Int "6" in
+          let actual = lexer |> read_digits |> snd in
+          Token.equal expected actual
+        ;;
+      end)
+    ;;
+
     let%test_module "skip_whitespace" =
       (module struct
         let%test "it skips whitespace" =
           let input = "       +" in
           let lexer = make input in
           let expected = Add in
-          let actual =
-            lexer |> skip_whitespace |> next_token |> snd |> Option.value_exn
-          in
+          let actual = lexer |> skip_whitespace |> next_token |> snd in
           Token.equal expected actual
         ;;
       end)
@@ -144,6 +171,46 @@ let%test_module "lexer" =
           let expected = Identifier "foobar" in
           let actual = lexer |> read_identifier |> snd in
           Token.equal expected actual
+        ;;
+      end)
+    ;;
+
+    let%test_module "read_digits" =
+      (module struct
+        let%test "it reads digits successfully" =
+          let input = "69" in
+          let lexer = make input in
+          let expected = Int "69" in
+          let actual = lexer |> read_digits |> snd in
+          Token.equal expected actual
+        ;;
+
+        let%test "it does read/lex decimals/floats" =
+          let input = "6.9" in
+          let lexer = make input in
+          let expected = Int "6" in
+          let actual = lexer |> read_digits |> snd in
+          Token.equal expected actual
+        ;;
+      end)
+    ;;
+
+    let%test_module "peek" =
+      (module struct
+        let%test "it should return the next character" =
+          let input = "69" in
+          let lexer = make input in
+          let peeked_char = peek lexer in
+          let expected = Some '9' in
+          Option.equal Char.equal expected peeked_char
+        ;;
+
+        let%test "it should return the next character" =
+          let input = "a" in
+          let lexer = make input in
+          let peeked_char = peek lexer in
+          let expected = None in
+          Option.equal Char.equal expected peeked_char
         ;;
       end)
     ;;
