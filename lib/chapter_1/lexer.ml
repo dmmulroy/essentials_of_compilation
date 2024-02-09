@@ -28,7 +28,7 @@ let rec advance_while lexer ~f:predicate =
 ;;
 
 let skip_whitespace = advance_while ~f:is_whitespace
-let peek lexer : char option = lexer |> advance |> current_char
+let peek lexer = lexer |> advance |> current_char
 
 let take_while lexer ~f:predicate =
   let rec loop char_buffer lexer =
@@ -49,7 +49,11 @@ let read_identifier lexer =
 let read_digits lexer =
   let open Token in
   let advanced_lexer, char_buffer = take_while lexer ~f:is_digit in
-  (advanced_lexer, Int (Buffer.contents char_buffer))
+  let value =
+    char_buffer |> Buffer.contents |> Int.of_string_opt
+    |> Option.value_exn ~message:"Invalid value for Integer token"
+  in
+  (advanced_lexer, Int value)
 ;;
 
 let next_token lexer =
@@ -60,7 +64,7 @@ let next_token lexer =
   | Some ch ->
       let advanced_lexer, token =
         match ch with
-        | '-' -> (advance lexer, Negate)
+        | '-' -> (advance lexer, Subtract)
         | '+' -> (advance lexer, Add)
         | '[' -> (advance lexer, LBracket)
         | ']' -> (advance lexer, RBracket)
@@ -92,7 +96,9 @@ let%test_module "lexer" =
         let%test "it should correctly tokenize input" =
           let input = "-+[]()" in
           let tokens = lex input in
-          let expected = [ Negate; Add; LBracket; RBracket; LParen; RParen ] in
+          let expected =
+            [ Subtract; Add; LBracket; RBracket; LParen; RParen ]
+          in
           List.equal Token.equal expected tokens
         ;;
       end)
@@ -104,7 +110,7 @@ let%test_module "lexer" =
           let input = "+++++++-)" in
           let lexer = make input in
           let lexer = lexer |> advance_while ~f:(fun ch -> Char.equal ch '+') in
-          let expected = [ Negate; RParen ] in
+          let expected = [ Subtract; RParen ] in
           let actual =
             lex
               (String.sub lexer.input ~pos:lexer.position
@@ -120,7 +126,7 @@ let%test_module "lexer" =
         let%test "it reads digits successfully" =
           let input = "69" in
           let lexer = make input in
-          let expected = Int "69" in
+          let expected = Int 69 in
           let actual = lexer |> read_digits |> snd in
           Token.equal expected actual
         ;;
@@ -128,7 +134,7 @@ let%test_module "lexer" =
         let%test "it does read/lex decimals/floats" =
           let input = "6.9" in
           let lexer = make input in
-          let expected = Int "6" in
+          let expected = Int 6 in
           let actual = lexer |> read_digits |> snd in
           Token.equal expected actual
         ;;
@@ -152,7 +158,7 @@ let%test_module "lexer" =
         let%test "it reads 'program' to the Program token" =
           let input = "program" in
           let lexer = make input in
-          let expected = Program in
+          let expected = Subtract in
           let actual = lexer |> read_identifier |> snd in
           Token.equal expected actual
         ;;
@@ -180,7 +186,7 @@ let%test_module "lexer" =
         let%test "it reads digits successfully" =
           let input = "69" in
           let lexer = make input in
-          let expected = Int "69" in
+          let expected = Int 69 in
           let actual = lexer |> read_digits |> snd in
           Token.equal expected actual
         ;;
@@ -188,7 +194,7 @@ let%test_module "lexer" =
         let%test "it does read/lex decimals/floats" =
           let input = "6.9" in
           let lexer = make input in
-          let expected = Int "6" in
+          let expected = Int 6 in
           let actual = lexer |> read_digits |> snd in
           Token.equal expected actual
         ;;

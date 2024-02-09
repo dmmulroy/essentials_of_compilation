@@ -11,7 +11,7 @@ let rec print_tokens lexer =
 ;;
 
 let run () =
-  Out_channel.print_endline "Rint REPL\n";
+  Out_channel.print_endline "Lint REPL\n";
   let rec loop () =
     let line_opt = In_channel.(stdin |> input_line) in
     match line_opt with
