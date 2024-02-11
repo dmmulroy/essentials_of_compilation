@@ -19,41 +19,37 @@ let advance parser =
 let peek t = Lexer.next_token t.lexer |> snd
 
 let parse_operation (parser : t) : t * Ast.operation =
-  let lexer, token = Lexer.next_token parser.lexer in
-  match token with
+  match parser.token with
   | Add -> (advance parser, Ast.Add)
   | Subtract -> (advance parser, Ast.Subtract)
   | Read -> (advance parser, Ast.Read)
   | _ ->
       raise
         (Invalid_token
-           ( token,
-             Fmt.str "Expected Add, Subtract, or Read. Received %a" Token.pp
-               token ))
+           ( parser.token,
+             Fmt.str "Expected Add, Subtract, or Read. Received %a\n\n" Token.pp
+               parser.token ))
 ;;
 
-let token_is_operation = function
-  | Token.Read -> true
-  | Token.Add -> true
-  | Token.Subtract -> true
-  | _ -> false
-;;
-
-let rec parse_expression (parser : t) =
-  match peek parser with
-  | Int int -> (advance parser, Ast.Int int)
-  | LParen ->
+let rec parse_expression parser =
+  match (parser.token, peek parser) with
+  | Int int, _ -> (advance parser, Ast.Int int)
+  | LParen, Int _ | LParen, LParen ->
+      let parser', expression = parser |> advance |> parse_expression in
+      (advance parser', expression)
+  | LParen, _ ->
       let parser', operation = parse_operation (advance parser) in
-      let rec parse_arguments parser expressions =
-        match peek parser with
-        | RParen -> (advance parser, List.rev expressions)
-        | _ as parser' ->
-            let parser', expression = parse_expression (advance parser) in
-            parse_arguments (advance parser') (expression :: expressions)
+      let rec parse_arguments parser =
+        match parser.token with
+        | RParen -> (parser, [])
+        | token ->
+            let parser', expression = parse_expression parser in
+            let parser', arguments = parse_arguments parser' in
+            (parser', expression :: arguments)
       in
-      let parser', arguments = parse_arguments parser' [] in
-      (parser', Ast.Prim { operation; expressions = arguments })
-  | token ->
+      let parser', arguments = parse_arguments parser' in
+      (advance parser', Ast.Prim { operation; expressions = arguments })
+  | token, _ ->
       raise
         (Invalid_token
            ( token,
@@ -64,4 +60,112 @@ let rec parse_expression (parser : t) =
 let parse (parser : t) : Ast.t =
   let _, body = parse_expression parser in
   { info = (); body }
+;;
+
+let%test_module "parser" =
+  (module struct
+    open Ast
+    (*
+    let%test "simple" =
+      let input = "(+ (read) 3)" in
+      let expected =
+        {
+          info = ();
+          body =
+            Prim
+              {
+                operation = Add;
+                expressions =
+                  [ Prim { operation = Read; expressions = [] }; Int 3 ];
+              };
+        }
+      in
+      let parser = make (Lexer.make input) in
+      let actual = parse parser in
+      Ast.equal expected actual
+    ;; *)
+
+    (* let%test "it parses ((10))" = *)
+    (*   let input = "((10))" in *)
+    (*   let expected = { info = (); body = Int 10 } in *)
+    (*   let parser = make (Lexer.make input) in *)
+    (*   let actual = parse parser in *)
+    (*   Ast.equal expected actual *)
+    (* ;; *)
+    (**)
+    (* let%test "it parses (+ (10) (10))" = *)
+    (*   let input = "(+ (10) (10))" in *)
+    (*   let expected = *)
+    (*     { *)
+    (*       info = (); *)
+    (*       body = Prim { operation = Add; expressions = [ Int 10; Int 10 ] }; *)
+    (*     } *)
+    (*   in *)
+    (*   let parser = make (Lexer.make input) in *)
+    (*   let actual = parse parser in *)
+    (*   Ast.equal expected actual *)
+    (* ;; *)
+
+    let%test "it parses (+ (10) (9))" =
+      let input = "(+ (10) (9))" in
+      let expected =
+        {
+          info = ();
+          body = Prim { operation = Add; expressions = [ Int 10; Int 9 ] };
+        }
+      in
+      let parser = make (Lexer.make input) in
+      let actual = parse parser in
+      Fmt.pr "Expected: %s\n" Ast.(to_string expected);
+      Fmt.pr "Actual %s\n" Ast.(to_string actual);
+      Ast.equal expected actual
+    ;;
+
+    (*
+       let%test "it parses (+ (69) (100))" =
+         let input = "(+ (69) (100))" in
+         let expected =
+           {
+             info = ();
+             body = Prim { operation = Add; expressions = [ Int 69; Int 100 ] };
+           }
+         in
+         let parser = make (Lexer.make input) in
+         let actual = parse parser in
+         Ast.equal expected actual
+       ;;
+
+       let%test "complex" =
+         let input = "(+ (read) (- (+ 5 3)))" in
+         let expected =
+           {
+             info = ();
+             body =
+               Prim
+                 {
+                   operation = Add;
+                   expressions =
+                     [
+                       Prim { operation = Read; expressions = [] };
+                       Prim
+                         {
+                           operation = Subtract;
+                           expressions =
+                             [
+                               Prim
+                                 {
+                                   operation = Add;
+                                   expressions = [ Int 5; Int 3 ];
+                                 };
+                             ];
+                         };
+                     ];
+                 };
+           }
+         in
+         let parser = make (Lexer.make input) in
+         let actual = parse parser in
+         Ast.equal expected actual
+       ;; *)
+  end)
 ;;

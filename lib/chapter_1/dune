@@ -1,6 +1,6 @@
 (library
- (name rint)
+ (name lint)
  (inline_tests)
  (libraries base fmt stdio)
  (preprocess
-  (pps ppx_deriving.eq ppx_inline_test)))
+  (pps ppx_deriving.show ppx_deriving.eq ppx_inline_test)))

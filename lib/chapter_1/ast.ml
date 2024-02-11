@@ -1,15 +1,16 @@
 [@@@ocaml.warning "-32-69"]
 
-type t = { info : unit; body : expression }
+type t = { info : unit; body : expression } [@@deriving eq, show]
 
 and expression =
   | Int of int
   | Prim of { operation : operation; expressions : expression list }
+[@@deriving eq, show]
 
-and operation = Read | Subtract | Add
+and operation = Read | Subtract | Add [@@deriving eq, show]
 
 let operation_to_string = function
-  | Read -> "read ()"
+  | Read -> "read"
   | Subtract -> "-"
   | Add -> "+"
 ;;

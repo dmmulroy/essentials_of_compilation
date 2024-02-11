@@ -101,6 +101,24 @@ let%test_module "lexer" =
           in
           List.equal Token.equal expected tokens
         ;;
+
+        let%test "it should correctly tokenize input 2" =
+          let input = "(+ 3 5)" in
+          let tokens = lex input in
+          let expected = [ LParen; Add; Int 3; Int 5; RParen ] in
+          List.equal Token.equal expected tokens
+        ;;
+
+        let%test "it should correctly tokenize input 2" =
+          let input = "(+ (10) (9))" in
+          let tokens = lex input in
+          let expected =
+            [
+              LParen; Add; LParen; Int 10; RParen; LParen; Int 9; RParen; RParen;
+            ]
+          in
+          List.equal Token.equal expected tokens
+        ;;
       end)
     ;;
 
@@ -155,14 +173,6 @@ let%test_module "lexer" =
 
     let%test_module "read_identifier" =
       (module struct
-        let%test "it reads 'program' to the Program token" =
-          let input = "program" in
-          let lexer = make input in
-          let expected = Subtract in
-          let actual = lexer |> read_identifier |> snd in
-          Token.equal expected actual
-        ;;
-
         let%test "it reads 'read' to the Read token" =
           let input = "read" in
           let lexer = make input in

@@ -13,13 +13,15 @@ let rec print_tokens lexer =
 let run () =
   Out_channel.print_endline "Lint REPL\n";
   let rec loop () =
+    Out_channel.printf "Please enter a valid Lint expression: %!";
     let line_opt = In_channel.(stdin |> input_line) in
     match line_opt with
     | None -> ()
     | Some line when String.equal line "" -> ()
     | Some line ->
-        let lexer = Lexer.make line in
-        print_tokens lexer;
+        line |> Lexer.make |> Parser.make |> Parser.parse
+        |> Interpreter.interpret
+        |> Out_channel.printf "The result is: %d\n%!";
         loop ()
   in
   loop ()

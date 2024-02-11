@@ -29,6 +29,8 @@ let to_string = function
   | RParen -> "RParen"
 ;;
 
+let is_int = function Int _ -> true | _ -> false
+
 let to_string_literal = function
   | Eof -> "Eof"
   | Illegal str -> Fmt.str "%s" str
@@ -44,7 +46,7 @@ let to_string_literal = function
 ;;
 
 let pp fmt token =
-  Fmt.pf fmt "Token: %s, Literal: %s" (to_string token)
+  Fmt.pf fmt "Token: %s, Literal: '%s'" (to_string token)
     (to_string_literal token)
 ;;
 
