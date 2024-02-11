@@ -18,19 +18,6 @@ let advance parser =
 
 let peek t = Lexer.next_token t.lexer |> snd
 
-let parse_operation (parser : t) : t * Ast.operation =
-  match parser.token with
-  | Add -> (advance parser, Ast.Add)
-  | Subtract -> (advance parser, Ast.Subtract)
-  | Read -> (advance parser, Ast.Read)
-  | _ ->
-      raise
-        (Invalid_token
-           ( parser.token,
-             Fmt.str "Expected Add, Subtract, or Read. Received %a\n\n" Token.pp
-               parser.token ))
-;;
-
 let rec parse_expression parser =
   match (parser.token, peek parser) with
   | Int int, _ -> (advance parser, Ast.Int int)
@@ -55,6 +42,30 @@ let rec parse_expression parser =
            ( token,
              Fmt.str "Expected LParen or Int(int). Received %a" Token.pp token
            ))
+
+and parse_operation (parser : t) : t * Ast.operation =
+  match parser.token with
+  | Plus -> (advance parser, Ast.Add)
+  | Minus -> (
+      match peek parser with
+      | LParen | Int _ -> (
+          let parser', expression = parse_expression (advance parser) in
+          match parser'.token with
+          | LParen | Int _ -> (advance parser, Ast.Subtract)
+          | _ -> (advance parser, Ast.Negate))
+      | _ ->
+          raise
+            (Invalid_token
+               ( parser.token,
+                 Fmt.str "Expected LParen or Int(int). Received %a\n\n" Token.pp
+                   parser.token )))
+  | Read -> (advance parser, Ast.Read)
+  | _ ->
+      raise
+        (Invalid_token
+           ( parser.token,
+             Fmt.str "Expected Add, Subtract, or Read. Received %a\n\n" Token.pp
+               parser.token ))
 ;;
 
 let parse (parser : t) : Ast.t =
@@ -65,7 +76,7 @@ let parse (parser : t) : Ast.t =
 let%test_module "parser" =
   (module struct
     open Ast
-    (*
+
     let%test "simple" =
       let input = "(+ (read) 3)" in
       let expected =
@@ -83,28 +94,28 @@ let%test_module "parser" =
       let parser = make (Lexer.make input) in
       let actual = parse parser in
       Ast.equal expected actual
-    ;; *)
+    ;;
 
-    (* let%test "it parses ((10))" = *)
-    (*   let input = "((10))" in *)
-    (*   let expected = { info = (); body = Int 10 } in *)
-    (*   let parser = make (Lexer.make input) in *)
-    (*   let actual = parse parser in *)
-    (*   Ast.equal expected actual *)
-    (* ;; *)
-    (**)
-    (* let%test "it parses (+ (10) (10))" = *)
-    (*   let input = "(+ (10) (10))" in *)
-    (*   let expected = *)
-    (*     { *)
-    (*       info = (); *)
-    (*       body = Prim { operation = Add; expressions = [ Int 10; Int 10 ] }; *)
-    (*     } *)
-    (*   in *)
-    (*   let parser = make (Lexer.make input) in *)
-    (*   let actual = parse parser in *)
-    (*   Ast.equal expected actual *)
-    (* ;; *)
+    let%test "it parses ((10))" =
+      let input = "((10))" in
+      let expected = { info = (); body = Int 10 } in
+      let parser = make (Lexer.make input) in
+      let actual = parse parser in
+      Ast.equal expected actual
+    ;;
+
+    let%test "it parses (+ (10) (10))" =
+      let input = "(+ (10) (10))" in
+      let expected =
+        {
+          info = ();
+          body = Prim { operation = Add; expressions = [ Int 10; Int 10 ] };
+        }
+      in
+      let parser = make (Lexer.make input) in
+      let actual = parse parser in
+      Ast.equal expected actual
+    ;;
 
     let%test "it parses (+ (10) (9))" =
       let input = "(+ (10) (9))" in
@@ -116,56 +127,53 @@ let%test_module "parser" =
       in
       let parser = make (Lexer.make input) in
       let actual = parse parser in
-      Fmt.pr "Expected: %s\n" Ast.(to_string expected);
-      Fmt.pr "Actual %s\n" Ast.(to_string actual);
       Ast.equal expected actual
     ;;
 
-    (*
-       let%test "it parses (+ (69) (100))" =
-         let input = "(+ (69) (100))" in
-         let expected =
-           {
-             info = ();
-             body = Prim { operation = Add; expressions = [ Int 69; Int 100 ] };
-           }
-         in
-         let parser = make (Lexer.make input) in
-         let actual = parse parser in
-         Ast.equal expected actual
-       ;;
+    let%test "it parses (+ (69) (100))" =
+      let input = "(+ (69) (100))" in
+      let expected =
+        {
+          info = ();
+          body = Prim { operation = Add; expressions = [ Int 69; Int 100 ] };
+        }
+      in
+      let parser = make (Lexer.make input) in
+      let actual = parse parser in
+      Ast.equal expected actual
+    ;;
 
-       let%test "complex" =
-         let input = "(+ (read) (- (+ 5 3)))" in
-         let expected =
-           {
-             info = ();
-             body =
-               Prim
-                 {
-                   operation = Add;
-                   expressions =
-                     [
-                       Prim { operation = Read; expressions = [] };
-                       Prim
-                         {
-                           operation = Subtract;
-                           expressions =
-                             [
-                               Prim
-                                 {
-                                   operation = Add;
-                                   expressions = [ Int 5; Int 3 ];
-                                 };
-                             ];
-                         };
-                     ];
-                 };
-           }
-         in
-         let parser = make (Lexer.make input) in
-         let actual = parse parser in
-         Ast.equal expected actual
-       ;; *)
+    let%test "complex" =
+      let input = "(+ (read) (- (+ 5 3)))" in
+      let expected =
+        {
+          info = ();
+          body =
+            Prim
+              {
+                operation = Add;
+                expressions =
+                  [
+                    Prim { operation = Read; expressions = [] };
+                    Prim
+                      {
+                        operation = Subtract;
+                        expressions =
+                          [
+                            Prim
+                              {
+                                operation = Add;
+                                expressions = [ Int 5; Int 3 ];
+                              };
+                          ];
+                      };
+                  ];
+              };
+        }
+      in
+      let parser = make (Lexer.make input) in
+      let actual = parse parser in
+      Ast.equal expected actual
+    ;;
   end)
 ;;

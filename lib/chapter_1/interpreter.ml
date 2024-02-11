@@ -3,26 +3,8 @@ open Base
 open Stdio
 
 exception Invalid_ast_node of Ast.t
-exception Invalid_expression of expression
+exception Invalid_expression of expression * string
 exception Invalid_read_operation of string
-
-let is_leaf = function
-  | Int _ -> true
-  | Prim { operation = Read; expressions = [] } -> true
-  | Prim { operation = Subtract; expressions = [ _ ] } -> false
-  | Prim { operation = Add; expressions = [ _; _ ] } -> false
-  | _ -> false
-;;
-
-let rec is_valid_expression = function
-  | Int _ -> true
-  | Prim { operation = Read; expressions = [] } -> true
-  | Prim { operation = Subtract; expressions = [ expression ] } ->
-      is_valid_expression expression
-  | Prim { operation = Add; expressions = [ expression_1; expression_2 ] } ->
-      is_valid_expression expression_1 && is_valid_expression expression_2
-  | _ -> false
-;;
 
 let rec interpret_expression = function
   | Int n -> n
@@ -31,13 +13,19 @@ let rec interpret_expression = function
       match Stdlib.read_int_opt () with
       | Some n -> n
       | None -> raise (Invalid_read_operation "Read expected an integer"))
-  | Prim { operation = Subtract; expressions = [ expression ] } ->
+  | Prim { operation = Negate; expressions = [ expression ] } ->
       -interpret_expression expression
+  | Prim { operation = Subtract; expressions = [ expression_1; expression_2 ] }
+    ->
+      let a = interpret_expression expression_1 in
+      let b = interpret_expression expression_2 in
+      a - b
   | Prim { operation = Add; expressions = [ expression_1; expression_2 ] } ->
       let a = interpret_expression expression_1 in
       let b = interpret_expression expression_2 in
       a + b
-  | expression -> raise (Invalid_expression expression)
+  | expression ->
+      raise (Invalid_expression (expression, Ast.show_expression expression))
 ;;
 
 let interpret { body; _ } = interpret_expression body
@@ -48,8 +36,15 @@ let partial_eval_negate = function
       Prim { operation = Subtract; expressions = [ expression ] }
 ;;
 
+let partial_eval_subtract = function
+  | Int a, Int b -> Int (a - b)
+  | expression_1, expression_2 ->
+      Prim
+        { operation = Subtract; expressions = [ expression_1; expression_2 ] }
+;;
+
 let partial_eval_add = function
-  | Int n, Int m -> Int (n + m)
+  | Int a, Int b -> Int (a + b)
   | expression_1, expression_2 ->
       Prim { operation = Add; expressions = [ expression_1; expression_2 ] }
 ;;
@@ -59,11 +54,17 @@ let rec partial_eval_expression = function
   | Prim { operation = Read; expressions = [] } as read -> read
   | Prim { operation = Subtract; expressions = [ expression ] } ->
       partial_eval_negate (partial_eval_expression expression)
+  | Prim { operation = Subtract; expressions = [ expression_1; expression_2 ] }
+    ->
+      partial_eval_subtract
+        ( partial_eval_expression expression_1,
+          partial_eval_expression expression_2 )
   | Prim { operation = Add; expressions = [ expression_1; expression_2 ] } ->
       partial_eval_add
         ( partial_eval_expression expression_1,
           partial_eval_expression expression_2 )
-  | expression -> raise (Invalid_expression expression)
+  | expression ->
+      raise (Invalid_expression (expression, Ast.show_expression expression))
 ;;
 
 let partial_eval { body; info } = { info; body = partial_eval_expression body }
@@ -84,7 +85,7 @@ let%test_module "l_int" =
       (module struct
         let%test "Read [] is a leaf" =
           Bool.equal
-            (is_leaf (Prim { operation = Read; expressions = [] }))
+            (Ast.is_leaf (Prim { operation = Read; expressions = [] }))
             true
         ;;
 

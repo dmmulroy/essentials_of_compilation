@@ -64,8 +64,8 @@ let next_token lexer =
   | Some ch ->
       let advanced_lexer, token =
         match ch with
-        | '-' -> (advance lexer, Subtract)
-        | '+' -> (advance lexer, Add)
+        | '-' -> (advance lexer, Minus)
+        | '+' -> (advance lexer, Plus)
         | '[' -> (advance lexer, LBracket)
         | ']' -> (advance lexer, RBracket)
         | '(' -> (advance lexer, LParen)
@@ -96,16 +96,14 @@ let%test_module "lexer" =
         let%test "it should correctly tokenize input" =
           let input = "-+[]()" in
           let tokens = lex input in
-          let expected =
-            [ Subtract; Add; LBracket; RBracket; LParen; RParen ]
-          in
+          let expected = [ Minus; Plus; LBracket; RBracket; LParen; RParen ] in
           List.equal Token.equal expected tokens
         ;;
 
         let%test "it should correctly tokenize input 2" =
           let input = "(+ 3 5)" in
           let tokens = lex input in
-          let expected = [ LParen; Add; Int 3; Int 5; RParen ] in
+          let expected = [ LParen; Plus; Int 3; Int 5; RParen ] in
           List.equal Token.equal expected tokens
         ;;
 
@@ -114,7 +112,15 @@ let%test_module "lexer" =
           let tokens = lex input in
           let expected =
             [
-              LParen; Add; LParen; Int 10; RParen; LParen; Int 9; RParen; RParen;
+              LParen;
+              Plus;
+              LParen;
+              Int 10;
+              RParen;
+              LParen;
+              Int 9;
+              RParen;
+              RParen;
             ]
           in
           List.equal Token.equal expected tokens
@@ -128,7 +134,7 @@ let%test_module "lexer" =
           let input = "+++++++-)" in
           let lexer = make input in
           let lexer = lexer |> advance_while ~f:(fun ch -> Char.equal ch '+') in
-          let expected = [ Subtract; RParen ] in
+          let expected = [ Minus; RParen ] in
           let actual =
             lex
               (String.sub lexer.input ~pos:lexer.position
@@ -164,7 +170,7 @@ let%test_module "lexer" =
         let%test "it skips whitespace" =
           let input = "       +" in
           let lexer = make input in
-          let expected = Add in
+          let expected = Plus in
           let actual = lexer |> skip_whitespace |> next_token |> snd in
           Token.equal expected actual
         ;;

@@ -7,22 +7,26 @@ and expression =
   | Prim of { operation : operation; expressions : expression list }
 [@@deriving eq, show]
 
-and operation = Read | Subtract | Add [@@deriving eq, show]
+and operation = Read | Subtract | Negate | Add [@@deriving eq, show]
 
-let operation_to_string = function
-  | Read -> "read"
-  | Subtract -> "-"
-  | Add -> "+"
+let is_leaf = function
+  | Int _ -> true
+  | Prim { operation = Read; expressions = [] } -> true
+  | Prim { operation = Negate; expressions = [ _ ] } -> false
+  | Prim { operation = Subtract; expressions = [ _; _ ] } -> false
+  | Prim { operation = Add; expressions = [ _; _ ] } -> false
+  | _ -> false
 ;;
 
-let rec expression_to_string = function
-  | Int i -> string_of_int i
-  | Prim { operation; expressions } ->
-      Fmt.str "(Prim %s (%s))"
-        (operation_to_string operation)
-        (String.concat " " (List.map expression_to_string expressions))
-;;
-
-let to_string { body; _ } =
-  Fmt.str "(Program '() (%s))" (expression_to_string body)
+let rec is_valid_expression = function
+  | Int _ -> true
+  | Prim { operation = Read; expressions = [] } -> true
+  | Prim { operation = Negate; expressions = [ expression ] } ->
+      is_valid_expression expression
+  | Prim { operation = Subtract; expressions = [ expression_1; expression_2 ] }
+    ->
+      is_valid_expression expression_1 && is_valid_expression expression_2
+  | Prim { operation = Add; expressions = [ expression_1; expression_2 ] } ->
+      is_valid_expression expression_1 && is_valid_expression expression_2
+  | _ -> false
 ;;

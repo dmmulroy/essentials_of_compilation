@@ -5,8 +5,8 @@ type t =
   | Identifier of string
   | Int of int
   (* Operators *)
-  | Add
-  | Subtract
+  | Plus
+  | Minus
   | Read
   (* Delimiters *)
   | LBracket
@@ -20,8 +20,8 @@ let to_string = function
   | Eof -> "Eof"
   | Identifier str -> Fmt.str "Identifier(%s)" str
   | Int int -> Fmt.str "Int(%d)" int
-  | Add -> "Add"
-  | Subtract -> "Subtract"
+  | Plus -> "Plus"
+  | Minus -> "Minus"
   | Read -> "Read"
   | LBracket -> "LBracket"
   | RBracket -> "RBracket"
@@ -36,8 +36,8 @@ let to_string_literal = function
   | Illegal str -> Fmt.str "%s" str
   | Identifier str -> Fmt.str "%s" str
   | Int int -> Fmt.str "%d" int
-  | Add -> "+"
-  | Subtract -> "-"
+  | Plus -> "+"
+  | Minus -> "-"
   | Read -> "read"
   | LBracket -> "["
   | RBracket -> "]"
