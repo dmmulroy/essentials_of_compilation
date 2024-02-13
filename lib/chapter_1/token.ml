@@ -29,8 +29,6 @@ let to_string = function
   | RParen -> "RParen"
 ;;
 
-let is_int = function Int _ -> true | _ -> false
-
 let to_string_literal = function
   | Eof -> "Eof"
   | Illegal str -> Fmt.str "%s" str
