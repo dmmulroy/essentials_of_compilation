@@ -1,0 +1,6 @@
+(library
+ (name lvar)
+ (inline_tests)
+ (libraries base fmt stdio)
+ (preprocess
+  (pps ppx_deriving.show ppx_deriving.eq ppx_inline_test)))

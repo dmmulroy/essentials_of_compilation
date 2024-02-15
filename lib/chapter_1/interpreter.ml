@@ -32,8 +32,7 @@ let interpret { body; _ } = interpret_expression body
 
 let partial_eval_negate = function
   | Int n -> Int (-n)
-  | _ as expression ->
-      Prim { operation = Subtract; expressions = [ expression ] }
+  | _ as expression -> Prim { operation = Negate; expressions = [ expression ] }
 ;;
 
 let partial_eval_subtract = function
@@ -52,7 +51,7 @@ let partial_eval_add = function
 let rec partial_eval_expression = function
   | Int n -> Int n
   | Prim { operation = Read; expressions = [] } as read -> read
-  | Prim { operation = Subtract; expressions = [ expression ] } ->
+  | Prim { operation = Negate; expressions = [ expression ] } ->
       partial_eval_negate (partial_eval_expression expression)
   | Prim { operation = Subtract; expressions = [ expression_1; expression_2 ] }
     ->
@@ -77,7 +76,7 @@ let%test_module "l_int" =
         {
           operation = Add;
           expressions =
-            [ Int rv; Prim { operation = Subtract; expressions = [ Int 8 ] } ];
+            [ Int rv; Prim { operation = Negate; expressions = [ Int 8 ] } ];
         }
     ;;
 
@@ -91,9 +90,9 @@ let%test_module "l_int" =
 
         let%test "Int 8 is a leaf" = Bool.equal (is_leaf (Int 8)) true
 
-        let%test "Subtract (Int 8) is not a leaf" =
+        let%test "Negate (Int 8) is not a leaf" =
           Bool.equal
-            (is_leaf (Prim { operation = Subtract; expressions = [ Int 8 ] }))
+            (is_leaf (Prim { operation = Negate; expressions = [ Int 8 ] }))
             false
         ;;
       end)
@@ -134,7 +133,7 @@ let%test_module "l_int" =
                         Prim { operation = Read; expressions = [] };
                         Prim
                           {
-                            operation = Subtract;
+                            operation = Negate;
                             expressions =
                               [
                                 Prim
@@ -178,7 +177,7 @@ let%test_module "l_int" =
                         Int 10;
                         Prim
                           {
-                            operation = Subtract;
+                            operation = Negate;
                             expressions =
                               [
                                 Prim
@@ -223,7 +222,7 @@ let%test_module "l_int" =
               body =
                 Prim
                   {
-                    operation = Subtract;
+                    operation = Negate;
                     expressions =
                       [
                         Prim { operation = Add; expressions = [ Int 3; Int 5 ] };

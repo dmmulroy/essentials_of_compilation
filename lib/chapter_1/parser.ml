@@ -1,7 +1,5 @@
 open Base
 
-[@@@ocaml.warning "-32-27-26-39"]
-
 type t = { lexer : Lexer.t; token : Token.t }
 
 exception Invalid_token of Token.t * string
@@ -29,7 +27,7 @@ let rec parse_expression parser =
       let rec parse_arguments parser =
         match parser.token with
         | RParen -> (parser, [])
-        | token ->
+        | _ ->
             let parser', expression = parse_expression parser in
             let parser', arguments = parse_arguments parser' in
             (parser', expression :: arguments)
@@ -49,7 +47,7 @@ and parse_operation (parser : t) : t * Ast.operation =
   | Minus -> (
       match peek parser with
       | LParen | Int _ -> (
-          let parser', expression = parse_expression (advance parser) in
+          let parser', _ = parse_expression (advance parser) in
           match parser'.token with
           | LParen | Int _ -> (advance parser, Ast.Subtract)
           | _ -> (advance parser, Ast.Negate))
@@ -157,7 +155,7 @@ let%test_module "parser" =
                     Prim { operation = Read; expressions = [] };
                     Prim
                       {
-                        operation = Subtract;
+                        operation = Negate;
                         expressions =
                           [
                             Prim
