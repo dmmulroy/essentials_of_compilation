@@ -17,7 +17,7 @@ let run () =
     let line_opt = In_channel.(stdin |> input_line) in
     match line_opt with
     | None -> ()
-    | Some line when String.equal line "" -> ()
+    | Some "" -> ()
     | Some line ->
         line |> Lexer.make |> Parser.make |> Parser.parse
         |> Interpreter.interpret

@@ -1,7 +1,5 @@
 open Base
 
-[@@@ocaml.warning "-32-27-26-39"]
-
 type t = { lexer : Lexer.t; token : Token.t }
 
 exception Invalid_token of Token.t * string
@@ -21,15 +19,19 @@ let peek t = Lexer.next_token t.lexer |> snd
 let rec parse_expression parser =
   match parser.token with
   | Int int -> (advance parser, Ast.Int int)
-  (* | LParen, Int _ | LParen, LParen ->
-      let parser', expression = parser |> advance |> parse_expression in
-      (advance parser', expression) *)
   | LParen -> (
       match advance parser with
       | { token = Int int; _ } as parser' -> (advance parser', Ast.Int int)
       | { token = LParen; _ } as parser' ->
           parser' |> advance |> parse_expression
       | _ -> failwith "")
+  | _ -> failwith ""
+
+and parse_operation parser =
+  match parser.token with
+  | Plus -> (advance parser, Ast.Add)
+  | Read -> (advance parser, Ast.Read)
+  | Minus -> ()
   | _ -> failwith ""
 ;;
 
